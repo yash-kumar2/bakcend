@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 
-const Task = mongoose.model('Groups', {
+const Groups = mongoose.model('Groups', {
     name: {
         type: String,
         required: true,

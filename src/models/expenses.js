@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 
-const Task = mongoose.model('Expenses', {
+const Expense = mongoose.model('Expense', {
     description: {
         type: String,
         required: true,
@@ -29,4 +29,4 @@ const Task = mongoose.model('Expenses', {
     
 },{ timestamps: true },)
 
-module.exports = Expenses
+module.exports = Expense
