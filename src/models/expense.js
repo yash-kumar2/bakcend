@@ -27,6 +27,6 @@ const Expense = mongoose.model('Expense', {
 
     },
     
-},{ timestamps: true },)
+})
 
 module.exports = Expense
