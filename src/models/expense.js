@@ -1,4 +1,4 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
 const Expense = mongoose.model('Expense', {
     description: {
@@ -6,7 +6,11 @@ const Expense = mongoose.model('Expense', {
         required: true,
         trim: true
     },
-    
+    type:{
+        type:String,
+        default:"Expense",
+
+    },
     owner: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
@@ -19,14 +23,17 @@ const Expense = mongoose.model('Expense', {
     },
     group: {
         type: mongoose.Schema.Types.ObjectId,
-        defualt:null,
+        default: null,
         ref: 'Groups'
     },
-    amount:{
-        type:Number,
-
+    amount: {
+        type: Number,
+        required: true
     },
-    
-})
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+});
 
-module.exports = Expense
+module.exports = Expense;
