@@ -5,8 +5,12 @@ const router = new express.Router()
 
 router.post('/users', async (req, res) => {
     const user = new User(req.body)
+    console.log(12123)
+   
 
     try {
+        console.log(req.body)
+        console.log("sdf");
         await user.save()
         const token = await user.generateAuthToken()
         res.status(201).send({ user, token })
