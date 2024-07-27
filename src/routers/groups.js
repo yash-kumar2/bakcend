@@ -5,9 +5,111 @@ const User = require('../models/user');
 const Expense = require('../models/expense');
 const Balance = require('../models/balance');
 const BalanceGroup = require('../models/balanceGroup');
+const BalanceGroupFriends=require('../models/balanceGroupFriends');
 const auth = require('../middleware/auth');
 const router = new express.Router();
+router.get('/groups', auth, async (req, res) => {
+    try {
+        // Find groups where the user is a member
+        const groups = await Groups.find({ members: req.user._id }).populate('members', 'name');
+        const userId = req.user._id;
 
+        const groupDetails = await Promise.all(groups.map(async (group) => {
+            // Calculate how much the user owes to the group
+            const balanceGroup = await BalanceGroup.findOne({ owner: userId, for: group._id });
+            const userBalance = balanceGroup ? balanceGroup.amount : 0;
+
+            // Get the balance for each friend in the group using BalanceGroupFriends
+            const friends = await Promise.all(group.members.map(async (member) => {
+                if (member._id.toString() !== userId.toString()) {
+                    const balance = await BalanceGroupFriends.findOne({ owner: userId, for: member._id, group: group._id });
+                    const amount = balance ? balance.amount : 0;
+                    return { name: member.name, amount };
+                }
+            }));
+
+            return {
+                id: group._id,
+                name: group.name,
+                userBalance,
+                friends: friends.filter(friend => friend !== undefined)
+            };
+        }));
+        console.log(groupDetails)
+
+        res.status(200).send(groupDetails);
+    } catch (e) {
+        console.error(e);
+        res.status(500).send({ error: 'Server error' });
+    }
+});
+router.get('/groups/:id', auth, async (req, res) => {
+    try {
+        // Find groups where the user is a member
+        const groupId = req.params.id;
+        const group= await Groups.findOne({ _id:groupId}).populate('members', 'name');
+        const userId = req.user._id;
+
+        // const groupDetails = await Promise.all(groups.map(async (group) => {
+        //     // Calculate how much the user owes to the group
+        //     const balanceGroup = await BalanceGroup.findOne({ owner: userId, for: group._id });
+        //     const userBalance = balanceGroup ? balanceGroup.amount : 0;
+
+        //     // Get the balance for each friend in the group using BalanceGroupFriends
+        //     const friends = await Promise.all(group.members.map(async (member) => {
+        //         if (member._id.toString() !== userId.toString()) {
+        //             const balance = await BalanceGroupFriends.findOne({ owner: userId, for: member._id, group: group._id });
+        //             const amount = balance ? balance.amount : 0;
+        //             return { name: member.name, amount };
+        //         }
+        //     }));
+
+        //     return {
+        //         id: group._id,
+        //         name: group.name,
+        //         userBalance,
+        //         
+        //     };
+        // }));
+
+        //console.log(groupDetails)
+            const balanceGroup = await BalanceGroup.findOne({ owner: userId, for: groupId });
+            const userBalance = balanceGroup ? balanceGroup.amount : 0;
+            const friends = await Promise.all(group.members.map(async (member) => {
+                if (member._id.toString() !== userId.toString()) {
+                    const balance = await BalanceGroupFriends.findOne({ owner: userId, for: member._id, group: group._id });
+                    const amount = balance ? balance.amount : 0;
+                    return { id:member._id, name: member.name, amount };
+                }
+            }));
+            const expense= await Expense.find({owner:req.user._id,group:groupId}).populate('for');
+            const expenses=expense.map((data)=>{
+                return {
+                    id:data._id,
+                    description:data.description,
+                    createdAt:data.createdAt,
+                    for:{
+                        name:data.for.name,
+                        id:data.for._id
+                    }
+
+                }
+            })
+            console.log(expense)
+            
+            const groupDetails={
+                userBalance,
+                friends: friends.filter(friend => friend !== undefined),
+                expenses
+            }
+            //console.log(group)
+
+        res.status(200).send(groupDetails);
+    } catch (e) {
+        console.error(e);
+        res.status(500).send({ error: 'Server error' });
+    }
+});
 
 router.post('/groups', auth, async (req, res) => {
     const group = new Groups({
@@ -27,6 +129,7 @@ router.post('/groups', auth, async (req, res) => {
 router.get('/groups', auth, async (req, res) => {
     try {
         const groups = await Groups.find({ members: req.user._id });
+        console.log("yash fd")
         console.log(groups);
         res.send(groups);
     } catch (e) {
@@ -34,6 +137,23 @@ router.get('/groups', auth, async (req, res) => {
         res.status(500).send();
     }
 });
+router.get('/groups/:id',auth,async(req,res)=>{
+    try{
+        const groupId = req.params.id;
+        console.log(req.user)
+        console.log(groupId)
+        console.log("ndsfa")
+        const group=await Groups.findOne({id:groupId});
+        const netBalance= await BalanceGroup.findOne({owner:req.user,for:groupId});
+        console.log(netBalance)
+        res.status(400).send(netBalance)
+
+
+    }
+    catch{
+        return res.status(404)
+    }
+})
 
 router.post('/groups/:id/addmembers', auth, async (req, res) => {
   console.log("FD")
@@ -195,10 +315,10 @@ router.post('/groups/:id/addexpense', auth, async (req, res) => {
         console.log(expenseDocs);
 
         await Expense.insertMany(expenseDocs);
-        console.log("asd");
+        console.log("Expenses added");
 
-        // Update group balance
-        const totalGroupAmount = expenseDetails.reduce((sum, detail) => sum + detail.amount, 0);
+        // Update group balance for the owner
+        const totalGroupAmount = expenseDetails.reduce((sum, detail) => parseInt(sum) + parseInt(detail.amount), 0);
         const balanceGroup = await BalanceGroup.findOne({ owner: ownerId, for: groupId });
         if (balanceGroup) {
             balanceGroup.amount += totalGroupAmount;
@@ -237,7 +357,8 @@ router.post('/groups/:id/addexpense', auth, async (req, res) => {
             // Update Balance documents
             const balance = await Balance.findOne({ owner: ownerId, for: detail.userId });
             if (balance) {
-                balance.amount += detail.amount;
+                balance.amount=parseInt(balance.amount)
+                balance.amount += parseInt(detail.amount);
                 await balance.save();
             } else {
                 await new Balance({ owner: ownerId, for: detail.userId, amount: detail.amount }).save();
@@ -250,15 +371,42 @@ router.post('/groups/:id/addexpense', auth, async (req, res) => {
             } else {
                 await new Balance({ owner: detail.userId, for: ownerId, amount: -detail.amount }).save();
             }
+
+            // Update BalanceGroup for the friend
+            const friendBalanceGroup = await BalanceGroup.findOne({ owner: detail.userId, for: groupId });
+            if (friendBalanceGroup) {
+                friendBalanceGroup.amount = -parseInt(detail.amount)+parseInt(friendBalanceGroup.amount);
+                await friendBalanceGroup.save();
+            } else {
+                await new BalanceGroup({ owner: detail.userId, for: groupId, amount: -detail.amount }).save();
+            }
+
+            // Update BalanceGroupFriends for the owner
+            const balanceGroupFriend = await BalanceGroupFriends.findOne({ owner: ownerId, for: detail.userId, group: groupId });
+            if (balanceGroupFriend) {
+                balanceGroupFriend.amount = parseInt(balanceGroupFriend.amount)+parseInt(detail.amount);
+                await balanceGroupFriend.save();
+            } else {
+                await new BalanceGroupFriends({ owner: ownerId, for: detail.userId, group: groupId, amount: detail.amount }).save();
+            }
+
+            // Update BalanceGroupFriends for the friend
+            const reverseBalanceGroupFriend = await BalanceGroupFriends.findOne({ owner: detail.userId, for: ownerId, group: groupId });
+            if (reverseBalanceGroupFriend) {
+                reverseBalanceGroupFriend.amount -= detail.amount;
+                await reverseBalanceGroupFriend.save();
+            } else {
+                await new BalanceGroupFriends({ owner: detail.userId, for: ownerId, group: groupId, amount: -detail.amount }).save();
+            }
         }
-        //const balance2 = await Balance.findOne({ owner: ownerId, for: detail.userId });
-         //console.log(balance2)
+
         res.status(200).send({ message: 'Expenses added successfully' });
     } catch (error) {
         console.error(error);
         res.status(500).send({ error: 'Server error' });
     }
 });
+
 router.post('/groups/:id/addsettlement', auth, async (req, res) => {
   const groupId = req.params.id;
   const { description, expenses } = req.body;
