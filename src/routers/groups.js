@@ -86,18 +86,21 @@ router.get('/groups/:id', auth, async (req, res) => {
             const expenses=expense.map((data)=>{
                 return {
                     id:data._id,
+                    
                     description:data.description,
                     createdAt:data.createdAt,
                     for:{
                         name:data.for.name,
                         id:data.for._id
-                    }
+                    },
+                    amount:data.amount
 
                 }
             })
-            console.log(expense)
+            console.log(group)
             
             const groupDetails={
+                description:group.name,
                 userBalance,
                 friends: friends.filter(friend => friend !== undefined),
                 expenses
@@ -146,7 +149,7 @@ router.get('/groups/:id',auth,async(req,res)=>{
         const group=await Groups.findOne({id:groupId});
         const netBalance= await BalanceGroup.findOne({owner:req.user,for:groupId});
         console.log(netBalance)
-        res.status(400).send(netBalance)
+        res.status(200).send(netBalance)
 
 
     }
@@ -154,8 +157,24 @@ router.get('/groups/:id',auth,async(req,res)=>{
         return res.status(404)
     }
 })
+router.get('/groups/:id/members',auth,async (req,res)=>{
+    const groupId=req.params.id;
+    console.log("here23")
+    try{
+    const group=await Groups.findOne({_id:groupId,members:req.user._id}).populate({
+        path: 'members',
+        select: 'id name email'
+      });
+    console.log(group)
+    res.status(200).send(group)
+    }
+    catch{
+        return res.status(404)
 
-router.post('/groups/:id/addmembers', auth, async (req, res) => {
+    }
+})
+
+router.post('/groups/:id/members', auth, async (req, res) => {
   console.log("FD")
     const groupId = req.params.id;
     const { emails } = req.body;
