@@ -82,7 +82,13 @@ router.get('/groups/:id', auth, async (req, res) => {
                     return { id:member._id, name: member.name, amount };
                 }
             }));
-            const expense= await Expense.find({owner:req.user._id,group:groupId}).populate('for');
+            const expense = await Expense.find({
+                group: groupId,
+                $or: [
+                  { owner: req.user._id },       // Condition 1: where owner is req.user._id
+                  { for: req.user._id }          // Condition 2: where for is req.user._id
+                ]
+              }).populate('for'); 
             const expenses=expense.map((data)=>{
                 return {
                     id:data._id,
@@ -298,9 +304,13 @@ async function addFriendship(userId1, userId2) {
 
 router.post('/groups/:id/addexpense', auth, async (req, res) => {
     const groupId = req.params.id;
-    const { description, expenses } = req.body;
-    const ownerId = req.user._id;
-    console.log(req.user);
+    const { description, expenses,payerEmail } = req.body;
+    console.log("sdfsdfsfs")
+    console.log(payerEmail)
+
+    let ownerId = await User.findOne({email:payerEmail})
+    ownerId=ownerId._id
+    console.log(ownerId);
     try {
         // Find the group by ID
         const group = await Groups.findById(groupId);
@@ -350,6 +360,7 @@ router.post('/groups/:id/addexpense', auth, async (req, res) => {
         for (const detail of expenseDetails) {
             const user = await User.findById(detail.userId);
             const owner = await User.findById(ownerId);
+            
 
             // Update the amount in the owner's friend list
             let ownerFriend = owner.friends.find(
