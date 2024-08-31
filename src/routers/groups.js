@@ -88,22 +88,31 @@ router.get('/groups/:id', auth, async (req, res) => {
                   { owner: req.user._id },       // Condition 1: where owner is req.user._id
                   { for: req.user._id }          // Condition 2: where for is req.user._id
                 ]
-              }).populate('for'); 
+              })
+              .populate('for')           // Populate the 'for' field
+              .populate('owner'); 
             const expenses=expense.map((data)=>{
+                console.log(data.for._id)
+                console.log(req.user._id)
                 return {
                     id:data._id,
                     
                     description:data.description,
                     createdAt:data.createdAt,
+                    owner:{
+                        email:data.owner.email
+                    },
                     for:{
                         name:data.for.name,
                         id:data.for._id
                     },
-                    amount:data.amount
+                    amount: req.user._id.equals(data.for._id) ? data.amount : -data.amount 
 
                 }
             })
-            console.log(group)
+           // console.log(group)
+        //    console.log(expense)
+        //    console.log(req.user._id)
             
             const groupDetails={
                 description:group.name,
