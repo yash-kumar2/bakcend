@@ -313,9 +313,11 @@ async function addFriendship(userId1, userId2) {
 
 router.post('/groups/:id/addexpense', auth, async (req, res) => {
     const groupId = req.params.id;
-    const { description, expenses,payerEmail } = req.body;
+    let { description, expenses,payerEmail } = req.body;
+     expenses = expenses.filter(expense => expense.email !== payerEmail);
+
     console.log("sdfsdfsfs")
-    console.log(payerEmail)
+    console.log(expenses)
 
     let ownerId = await User.findOne({email:payerEmail})
     ownerId=ownerId._id

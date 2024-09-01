@@ -6,6 +6,33 @@ const auth = require('../middleware/auth');
 const router = new express.Router();
 
 // Add an expense with a friend
+router.get('/friends', auth, async (req, res) => {
+    try {
+        // Find the user by their ID and populate their friends list
+        const user = await User.findById(req.user._id).populate('friends', 'name email');
+        if (!user) {
+            return res.status(404).send({ error: 'User not found' });
+        }
+
+        const friendsWithBalances = await Promise.all(user.friends.map(async (friend) => {
+            // Find the balance between the user and the friend
+            const balance = await Balance.findOne({ owner: req.user._id, for: friend._id });
+
+            return {
+                name: friend.name,
+                email: friend.email,
+                owedAmount: balance ? balance.amount : 0
+            };
+        }));
+
+        res.send(friendsWithBalances);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: 'Server error' });
+    }
+});
+
+module.exports = router;
 router.post('/friends/addexpense/:id', auth, async (req, res) => {
     const friendId = req.params.id;
     const { description, amount } = req.body;
