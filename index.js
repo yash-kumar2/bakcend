@@ -4,6 +4,7 @@ const userRouter = require('./src/routers/user')
 const taskRouter = require('./src/routers/task')
 const friendsRouter=require('./src/routers/friends')
 const groupsRouter=require('./src/routers/groups')
+const activityRouter=require('./src/routers/activities')
 const cors = require('cors');
 
 const app = express()
@@ -26,6 +27,7 @@ app.use(express.json())
 app.use(userRouter)
 app.use(groupsRouter)
 app.use(friendsRouter)
+app.use(activityRouter)
 
 
 app.listen(port, () => {
