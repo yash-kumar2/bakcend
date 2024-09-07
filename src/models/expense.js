@@ -6,10 +6,9 @@ const Expense = mongoose.model('Expense', {
         required: true,
         trim: true
     },
-    type:{
-        type:String,
-        default:"Expense",
-
+    type: {
+        type: String,
+        default: "Expense",
     },
     owner: {
         type: mongoose.Schema.Types.ObjectId,
@@ -33,6 +32,11 @@ const Expense = mongoose.model('Expense', {
     createdAt: {
         type: Date,
         default: Date.now
+    },
+    // New field to track who has read the expense
+    readBy: {
+        type: [mongoose.Schema.Types.ObjectId], // Array of user IDs
+        default: [] // Default is an empty array
     }
 });
 

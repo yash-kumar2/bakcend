@@ -13,20 +13,22 @@ router.get('/activity', auth, async (req, res) => {
         const expenses = await Expense.find({
             $or: [{ owner: userId }, { for: userId }]
         })
-        .sort({ createdAt: -1 }) // Sort by date in descending order
-        .populate('owner', 'name email') // Assuming User model has 'name' and 'email' fields
+        .sort({ createdAt: -1 })
+        .populate('owner', 'name email')
         .populate('for', 'name email')
-        .populate('group', 'name') // Assuming Groups model has a 'name' field
-        .lean(); // Convert to plain JavaScript objects for easier manipulation
+        .populate('group', 'name')
+        .lean();
 
         const activity = expenses.map(expense => ({
+            id: expense._id, // Include the ID for marking as read
             owner: expense.owner.name,
             for: expense.for.name,
             date: expense.createdAt,
             description: expense.description,
             groupName: expense.group ? expense.group.name : 'No Group',
             amount: expense.amount,
-            type: expense.owner.email === userEmail ? 'paid' : 'got'
+            type: expense.owner.email === userEmail ? 'paid' : 'got',
+            isRead: expense.readBy.map(id => id.toString()).includes(userId.toString())// Check if the user has read this activity
         }));
 
         res.json(activity);
@@ -36,6 +38,19 @@ router.get('/activity', auth, async (req, res) => {
     }
 });
 
+router.post('/activity/mark-read', auth, async (req, res) => {
+    try {
+        const { activityId } = req.body;
+        const userId = req.user._id;
+
+        await Expense.findByIdAndUpdate(activityId, { $addToSet: { readBy: userId } }); // Add userId to readBy if not already present
+
+        res.status(200).json({ message: 'Activity marked as read' });
+    } catch (error) {
+        console.error('Error marking activity as read:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
 
 
 
