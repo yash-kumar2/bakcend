@@ -60,7 +60,9 @@ router.post('/users/logoutAll', auth, async (req, res) => {
 router.get('/users/me', auth, async (req, res) => {
     res.send(req.user)
 })
-
+router.get('/test', async (req, res) => {
+    res.send("hola")
+})
 router.patch('/users/me', auth, async (req, res) => {
     const updates = Object.keys(req.body)
     const allowedUpdates = ['name', 'email', 'password', 'age']
