@@ -61,7 +61,7 @@ router.get('/users/me', auth, async (req, res) => {
     res.send(req.user)
 })
 router.get('/test', async (req, res) => {
-    res.send("hola")
+    res.send("hola2")
 })
 router.patch('/users/me', auth, async (req, res) => {
     const updates = Object.keys(req.body)
